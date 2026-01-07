@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <!-- STYLE_PLACEHOLDER -->
+</head>
+<body>
+  <div class="container">
+    <div class="section-title">Character Count Estimator</div>
+
+    <div id="errorSection" class="error-message" style="display: none;">
+      <div id="errorText"></div>
+    </div>
+
+    <div id="selectionSection" style="display: none;">
+      <div class="section">
+        <div class="label">Selected Text Layer</div>
+        <div class="info-grid">
+          <div class="info-row">
+            <span class="info-label">Font</span>
+            <span class="info-value" id="fontDisplay">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Width</span>
+            <span class="info-value" id="textBoxWidthDisplay">-</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="label">Language</div>
+        <div class="select-menu">
+          <select id="languageSelect" class="select-menu__button">
+            <option value="english">English</option>
+            <option value="german">German</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section">
+        <button id="computeBtn" class="button button--primary button--full-width">
+          Calculate Character Count
+        </button>
+      </div>
+
+      <div id="result" class="result" style="display: none;"></div>
+    </div>
+  </div>
+
+  <canvas id="measureCanvas" style="display: none;"></canvas>
+  <!-- SCRIPT_PLACEHOLDER -->
+</body>
+</html>

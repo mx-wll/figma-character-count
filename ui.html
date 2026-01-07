@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #ffffff;
+      color: #333;
+    }
+
+    .container {
+      max-width: 360px;
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0 0 20px 0;
+      color: #333;
+    }
+
+    .section {
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #555;
+    }
+
+    .error-message {
+      padding: 16px;
+      background: #ffebee;
+      border: 1px solid #f44336;
+      border-radius: 6px;
+      color: #c62828;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 12px;
+      padding: 16px;
+      background: #f5f5f5;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .info-label {
+      font-weight: 500;
+      color: #666;
+    }
+
+    .info-value {
+      color: #333;
+      font-weight: 400;
+    }
+
+    .compute-btn {
+      width: 100%;
+      padding: 12px;
+      background: #007acc;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .compute-btn:hover {
+      background: #005a9e;
+    }
+
+    .compute-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .result {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .result.success {
+      background: #e8f5e8;
+      border: 1px solid #4caf50;
+      color: #2e7d32;
+    }
+
+    .result.error {
+      background: #ffebee;
+      border: 1px solid #f44336;
+      color: #c62828;
+    }
+
+    .result-value {
+      font-size: 32px;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+
+    .result-detail {
+      font-size: 12px;
+      margin-top: 8px;
+      opacity: 0.8;
+    }
+
+    .loading {
+      text-align: center;
+      color: #666;
+      font-style: italic;
+    }
+
+    .info {
+      font-size: 12px;
+      color: #666;
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+
+    .language-select {
+      width: 100%;
+      padding: 8px 12px;
+      font-size: 14px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #fff;
+      color: #333;
+      cursor: pointer;
+    }
+
+    .language-select:focus {
+      outline: none;
+      border-color: #007acc;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Character Count Estimator</h1>
+
+    <div id="errorSection" class="error-message" style="display: none;">
+      <div id="errorText"></div>
+    </div>
+
+    <div id="selectionSection" style="display: none;">
+      <div class="section">
+        <div class="section-title">Selected Text Layer</div>
+        <div class="info-grid">
+          <div class="info-label">Font Name:</div>
+          <div class="info-value" id="fontNameDisplay">-</div>
+
+          <div class="info-label">Font Weight:</div>
+          <div class="info-value" id="fontStyleDisplay">-</div>
+
+          <div class="info-label">Font Size:</div>
+          <div class="info-value" id="fontSizeDisplay">-</div>
+
+          <div class="info-label">Letter Spacing:</div>
+          <div class="info-value" id="letterSpacingDisplay">-</div>
+
+          <div class="info-label">Text Box Width:</div>
+          <div class="info-value" id="textBoxWidthDisplay">-</div>
+
+          <div class="info-label">Language:</div>
+          <div class="info-value">
+            <select id="languageSelect" class="language-select">
+              <option value="english">English</option>
+              <option value="german">German</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <button id="computeBtn" class="compute-btn">
+          Calculate Character Count
+        </button>
+      </div>
+
+      <div id="result" class="result" style="display: none;"></div>
+    </div>
+  </div>
+
+  <canvas id="measureCanvas" style="display: none;"></canvas>
+
+  <script>
+    const errorSection = document.getElementById('errorSection');
+    const errorText = document.getElementById('errorText');
+    const selectionSection = document.getElementById('selectionSection');
+    const fontNameDisplay = document.getElementById('fontNameDisplay');
+    const fontStyleDisplay = document.getElementById('fontStyleDisplay');
+    const fontSizeDisplay = document.getElementById('fontSizeDisplay');
+    const letterSpacingDisplay = document.getElementById('letterSpacingDisplay');
+    const textBoxWidthDisplay = document.getElementById('textBoxWidthDisplay');
+    const languageSelect = document.getElementById('languageSelect');
+    const computeBtn = document.getElementById('computeBtn');
+    const resultDiv = document.getElementById('result');
+    const canvas = document.getElementById('measureCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let currentLayerData = null;
+
+    // Letter frequency data
+    const FREQUENCY_MAPS = {
+      english: {
+        'a': 8.17, 'b': 1.49, 'c': 2.78, 'd': 4.25, 'e': 12.70,
+        'f': 2.23, 'g': 2.02, 'h': 6.09, 'i': 6.97, 'j': 0.15,
+        'k': 0.77, 'l': 4.03, 'm': 2.41, 'n': 6.75, 'o': 7.51,
+        'p': 1.93, 'q': 0.10, 'r': 5.99, 's': 6.33, 't': 9.06,
+        'u': 2.76, 'v': 0.98, 'w': 2.36, 'x': 0.15, 'y': 1.97,
+        'z': 0.07, ' ': 18.0
+      },
+      german: {
+        'a': 6.51, 'b': 1.89, 'c': 3.06, 'd': 5.08, 'e': 17.40,
+        'f': 1.66, 'g': 3.01, 'h': 4.76, 'i': 7.55, 'j': 0.27,
+        'k': 1.21, 'l': 3.44, 'm': 2.53, 'n': 9.78, 'o': 2.51,
+        'p': 0.79, 'q': 0.02, 'r': 7.00, 's': 7.27, 't': 6.15,
+        'u': 4.35, 'v': 0.67, 'w': 1.89, 'x': 0.03, 'y': 0.04,
+        'z': 1.13, 'ä': 0.58, 'ö': 0.44, 'ü': 0.99, 'ß': 0.31,
+        ' ': 16.0
+      }
+    };
+
+    // Map font style names to numeric weights
+    function getFontWeight(fontStyle) {
+      const style = fontStyle.toLowerCase();
+
+      // Common font weight mappings
+      const weightMap = {
+        'thin': 100,
+        'hairline': 100,
+        'extralight': 200,
+        'extra light': 200,
+        'ultralight': 200,
+        'ultra light': 200,
+        'light': 300,
+        'regular': 400,
+        'normal': 400,
+        'book': 400,
+        'medium': 500,
+        'semibold': 600,
+        'semi bold': 600,
+        'demibold': 600,
+        'demi bold': 600,
+        'bold': 700,
+        'extrabold': 800,
+        'extra bold': 800,
+        'ultrabold': 800,
+        'ultra bold': 800,
+        'black': 900,
+        'heavy': 900
+      };
+
+      // Check for exact match first
+      if (weightMap[style]) {
+        return weightMap[style];
+      }
+
+      // Check if style contains any weight keyword
+      for (const [keyword, weight] of Object.entries(weightMap)) {
+        if (style.includes(keyword)) {
+          return weight;
+        }
+      }
+
+      // Default to regular
+      return 400;
+    }
+
+    // Measure character widths using canvas
+    function measureCharacterWidths(fontName, fontSize, fontStyle) {
+      const fontWeight = getFontWeight(fontStyle);
+      const fontString = `${fontWeight} ${fontSize}px "${fontName}"`;
+      ctx.font = fontString;
+      const widths = {};
+      const chars = 'abcdefghijklmnopqrstuvwxyzäöüß ';
+
+      console.log('=== CHARACTER WIDTH MEASUREMENT ===');
+      console.log('Font:', fontString);
+      console.log('Font weight mapped:', fontStyle, '→', fontWeight);
+      console.log('');
+
+      for (const char of chars) {
+        widths[char] = ctx.measureText(char).width;
+      }
+
+      console.table(Object.entries(widths).map(([char, width]) => ({
+        character: char === ' ' ? '(space)' : char,
+        width: width.toFixed(2) + 'px'
+      })));
+
+      return widths;
+    }
+
+    // Calculate weighted average character width
+    function calculateWeightedAverage(charWidths, language) {
+      const freqMap = FREQUENCY_MAPS[language] || FREQUENCY_MAPS.english;
+      const total = Object.values(freqMap).reduce((sum, freq) => sum + freq, 0);
+
+      console.log('');
+      console.log('=== WEIGHTED AVERAGE CALCULATION ===');
+      console.log('Language:', language);
+      console.log('');
+
+      let weightedSum = 0;
+      let weightTotal = 0;
+      const breakdown = [];
+
+      for (const [char, freq] of Object.entries(freqMap)) {
+        if (charWidths[char] !== undefined) {
+          const weight = freq / total;
+          const contribution = charWidths[char] * weight;
+          weightedSum += contribution;
+          weightTotal += weight;
+
+          breakdown.push({
+            character: char === ' ' ? '(space)' : char,
+            width: charWidths[char].toFixed(2) + 'px',
+            frequency: freq.toFixed(2) + '%',
+            weight: (weight * 100).toFixed(2) + '%',
+            contribution: contribution.toFixed(3) + 'px'
+          });
+        }
+      }
+
+      console.table(breakdown);
+      console.log('');
+      console.log('Sum of contributions:', weightedSum.toFixed(3) + 'px');
+      console.log('Total weight:', (weightTotal * 100).toFixed(2) + '%');
+
+      const result = weightTotal > 0 ? weightedSum / weightTotal : 0;
+      console.log('Weighted average (sum/weight):', result.toFixed(3) + 'px');
+
+      return result;
+    }
+
+    // Calculate max character count
+    function calculateCharacterCount(fontName, fontStyle, fontSize, letterSpacing, textBoxWidth, language) {
+      console.log('');
+      console.log('========================================');
+      console.log('   CHARACTER COUNT CALCULATION');
+      console.log('========================================');
+      console.log('');
+
+      const charWidths = measureCharacterWidths(fontName, fontSize, fontStyle);
+      const avgWidth = calculateWeightedAverage(charWidths, language);
+
+      // Add letter spacing to average width
+      const effectiveWidth = avgWidth + letterSpacing;
+
+      console.log('');
+      console.log('=== FINAL RESULT ===');
+      console.log('Text box width:', textBoxWidth.toFixed(2) + 'px');
+      console.log('Average character width:', avgWidth.toFixed(3) + 'px');
+      console.log('Letter spacing:', letterSpacing.toFixed(2) + 'px');
+      console.log('Effective width per char:', effectiveWidth.toFixed(3) + 'px', `(${avgWidth.toFixed(3)} + ${letterSpacing.toFixed(2)})`);
+      console.log('Calculation:', textBoxWidth.toFixed(2), '/', effectiveWidth.toFixed(3), '=', (textBoxWidth / effectiveWidth).toFixed(2));
+      console.log('Max characters (floored):', Math.floor(textBoxWidth / effectiveWidth));
+      console.log('========================================');
+      console.log('');
+
+      const maxChars = Math.floor(textBoxWidth / effectiveWidth);
+      return { maxChars, avgWidth: effectiveWidth };
+    }
+
+    // Show error message
+    function showError(message) {
+      errorSection.style.display = 'block';
+      selectionSection.style.display = 'none';
+      resultDiv.style.display = 'none';
+      errorText.textContent = message;
+    }
+
+    // Show selection data
+    function showSelectionData(data) {
+      errorSection.style.display = 'none';
+      selectionSection.style.display = 'block';
+      resultDiv.style.display = 'none';
+
+      currentLayerData = data;
+      fontNameDisplay.textContent = data.fontName;
+      fontStyleDisplay.textContent = data.fontStyle;
+      fontSizeDisplay.textContent = `${data.fontSize} px`;
+      letterSpacingDisplay.textContent = `${data.letterSpacing.toFixed(2)} px`;
+      textBoxWidthDisplay.textContent = `${Math.round(data.textBoxWidth)} px`;
+    }
+
+    // Handle compute button click
+    computeBtn.addEventListener('click', () => {
+      if (currentLayerData) {
+        console.log('Compute button clicked');
+
+        try {
+          const { maxChars, avgWidth } = calculateCharacterCount(
+            currentLayerData.fontName,
+            currentLayerData.fontStyle,
+            currentLayerData.fontSize,
+            currentLayerData.letterSpacing,
+            currentLayerData.textBoxWidth,
+            languageSelect.value
+          );
+
+          showResult(maxChars, avgWidth.toFixed(2));
+        } catch (error) {
+          console.error('Calculation error:', error);
+          showCalculationError(error.message);
+        }
+      }
+    });
+
+    // Show result
+    function showResult(maxChars, avgWidth) {
+      resultDiv.style.display = 'block';
+      resultDiv.className = 'result success';
+      resultDiv.innerHTML = `
+        <div>Maximum Character Count:</div>
+        <div class="result-value">${maxChars}</div>
+        <div class="result-detail">
+          Average character width: ${avgWidth} px
+        </div>
+      `;
+    }
+
+    // Show calculation error
+    function showCalculationError(message) {
+      resultDiv.style.display = 'block';
+      resultDiv.className = 'result error';
+      resultDiv.innerHTML = `<div>Error: ${message}</div>`;
+    }
+
+    // Listen for messages from the plugin
+    window.addEventListener('message', (event) => {
+      const message = event.data.pluginMessage;
+      console.log('Received message from plugin:', message);
+
+      if (message.type === 'selection-data') {
+        showSelectionData(message);
+      } else if (message.type === 'selection-error') {
+        showError(message.message);
+      }
+    });
+
+    // Initialize
+    console.log('Plugin UI initialized');
+  </script>
+</body>
+
+</html>

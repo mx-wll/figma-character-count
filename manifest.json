@@ -1,0 +1,18 @@
+{
+  "name": "Character Count Estimator",
+  "id": "1534455820171729105",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/ui.html",
+  "capabilities": [],
+  "enableProposedApi": false,
+  "documentAccess": "dynamic-page",
+  "editorType": [
+    "figma"
+  ],
+  "networkAccess": {
+    "allowedDomains": [
+      "https://www.googleapis.com"
+    ]
+  }
+}
